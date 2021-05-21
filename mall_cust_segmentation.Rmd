@@ -1,0 +1,115 @@
+---
+title: "Mall Customer Segmentation - KMeans Clustering"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Customer segmentation is the practice of dividing a customer base into groups of individuals that are similar in specific ways relevant to marketing, such as age, gender, and spending habits.
+
+The goal of segmenting customers is to decide how to relate to customers in each segment in order to maximize the value of each customer to the business.
+```{r}
+library(cluster)
+library(factoextra)
+library(tidyverse)
+library(gridExtra)
+library(ggplot2)
+library(readr)
+library(cowplot)
+library(scatterplot3d)
+
+```
+
+```{r}
+#Read Data
+mall_cust <- read.csv("Mall_Customers.csv")
+mall_cust
+```
+
+```{r}
+#Rename column
+mall_cust <- rename(mall_cust,c('SpendingScore'='Spending.Score..1.100.'))
+mall_cust <- rename(mall_cust,c('AnnualIncome'='Annual.Income..k..'))
+mall_cust$Gender <- as.factor(mall_cust$Gender)
+str(mall_cust)
+mall_cust
+```
+
+```{r}
+# check for missing data
+sum(is.na(mall_cust))
+```
+
+```{r}
+#Clustering by Age and Spending Score
+df1 <- mall_cust[,c(3,5)]
+set.seed(123)
+
+# function to compute total within-cluster sum of square 
+wss <- function(k) {
+  kmeans(df1, k, nstart = 10 )$tot.withinss}
+# Compute and plot wss for k = 1 to k = 15
+k.values <- 1:15
+# extract wss for 2-15 clusters
+wss_values <- map_dbl(k.values, wss)
+#Elbow method
+fviz_nbclust(df1, kmeans, method = "wss")
+```
+
+
+```{r}
+#Clustering by Age and Spending Score
+k2 <- kmeans(df1, centers = 4, nstart = 25)
+ggplot(df1, aes(x = Age, y = SpendingScore)) + 
+    geom_point(stat = "identity", aes(color = as.factor(k2$cluster))) +
+    scale_color_discrete(name=" ",labels=c(paste0("Cluster",1:4))) +
+    ggtitle("Mall Customer Segmens", subtitle = "K-means Clustering") + ylab("Spending Score")
+```
+4 clusters are observed
+
+1. High Spending Score - customers below 40 years old
+2. Medium Spending Score - customers below 40 years old
+3. Medium Spending Score - customers above 40 years old
+4. Low Spending Score - customers across a range of ages
+
+```{r}
+#Clustering by Annual Income and Spending Score
+df2 <- mall_cust[,4:5]
+set.seed(123)
+fviz_nbclust(df2, kmeans, method = "wss")
+```
+
+```{r}
+k2 <- kmeans(df2,5, nstart = 10)
+
+ggplot(df2, aes(x = AnnualIncome, y = SpendingScore)) + 
+    geom_point(stat = "identity", aes(color = as.factor(k2$cluster))) +
+    scale_color_discrete(name=" ",labels=c(paste0("Cluster",1:5))) +
+    ggtitle("Mall Customer Segments", subtitle = "K-means Clustering") + ylab("Spending Score") + xlab("Annual Income")
+```
+5 clusters are observed
+
+1. High Spending Score, with lower Annual Income
+2. High Spending Score, with higher Annual Income
+3. Medium Spending Score with medium Annual Income
+4. Low Spending Score with lower Annual Income
+5. Low Spending Score with higher Annual Income
+```{r}
+#Clustering by Age, Annual Income and Spending Score
+df3 <- mall_cust[,3:5]
+set.seed(123)
+fviz_nbclust(df3, kmeans, method = "wss")
+```
+
+
+```{r}
+k3 <- kmeans(df3,5, nstart = 10)
+fviz_cluster(k3, geom = "point",  data = df3) + ggtitle("k = 5")
+
+```
+
+```{r}
+with(df3, scatterplot3d(Age, SpendingScore, AnnualIncome,pch = 16, type = "p", color = k3$cluster))
+```
